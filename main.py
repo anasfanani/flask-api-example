@@ -1,10 +1,45 @@
 from flask import Flask, request
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+import psycopg2
+from psycopg2 import sql
+
+def create_table():
+    """
+    Membuat tabel pengguna di database.
+    """
+    conn = psycopg2.connect(
+        dbname='flask_example',
+        user='angeliav',
+        password='Angel14^_^',
+        host='localhost'
+    )
+    cur = conn.cursor()
+    # Cek apakah tabel pengguna sudah ada
+    cur.execute("SELECT to_regclass('public.users')")
+    table_exists = cur.fetchone()[0]
+    if not table_exists:
+        # Buat tabel pengguna
+        cur.execute("""
+            CREATE TABLE users (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(50),
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                is_active BOOLEAN DEFAULT TRUE
+            )
+        """)
+        conn.commit()
+        print('Tabel pengguna berhasil di buat.')
+    else:
+        print('Tabel pengguna sudah ada.')
+
+create_table()
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://angeliav:Angel14^_^@localhost/flask_example'
 db = SQLAlchemy(app)
+
 
 class Users(db.Model):
     """
@@ -54,9 +89,10 @@ def get_users():
     Pengguna dapat menampilkan semua pengguna dengan menggunakan method GET.
     """
     users = Users.query.all()
+    count_users = Users.query.count()
     if not users:
-        return {'success': False, 'message': 'Query gagal.'}, 200
-    return {'success': True, 'message': 'Query berhasil.', 'data': [user.to_dict() for user in users]}, 200
+        return {'success': False, 'message': 'Pengguna tidak ada sama sekali.'}, 200
+    return {'success': True, 'message': f'{count_users} Pengguna ditemukan.', 'data': [user.to_dict() for user in users]}, 200
 
 @app.route('/user/<id>', methods=['GET'])
 def get_user(id):
